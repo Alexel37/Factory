@@ -1,8 +1,7 @@
-﻿using System;
+﻿using API.Extentions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ConsoleApp
 {
@@ -13,7 +12,7 @@ namespace ConsoleApp
         {
             public char Value { get; set; }
 
-            public bool IsWriteable { get; set; }
+            public bool Writeable { get; set; }
 
             public int Id { get; set; }
 
@@ -55,12 +54,8 @@ namespace ConsoleApp
             };
 
             Console.Clear();
-            ConsoleItem last = null;
-            foreach (var item in items)
-            {
-                Console.WriteLine(item.Value.Title + item.Value.Value);
-                last = item.Value;
-            }
+            var last = items.Last().Value;
+            items.Values.ForEach(i => Console.WriteLine(i.Title + i.Value));
 
             Console.SetCursorPosition(last.Title.Length + last.Value.Length, Console.CursorTop - 1);
 
@@ -77,25 +72,25 @@ namespace ConsoleApp
                 }
 
                 var currentElement = GetCurrentElement(items, left, top);
-                var index = currentElement.Length;
+                var length = currentElement.Length;
 
                 switch (input.Key)
                 {
                     case ConsoleKey.LeftArrow:
                         left--;
-                        TrySetCursorPosition(left, top, true, index);
+                        TrySetCursorPosition(left, top, true, length);
                         break;
                     case ConsoleKey.RightArrow:
                         left++;
-                        TrySetCursorPosition(left, top, true, index);
+                        TrySetCursorPosition(left, top, true, length);
                         break;
                     case ConsoleKey.UpArrow:
                         top--;
-                        TrySetCursorPosition(left, top, false, index);
+                        TrySetCursorPosition(left, top, false, length);
                         break;
                     case ConsoleKey.DownArrow:
                         top++;
-                        TrySetCursorPosition(left, top, false, index);
+                        TrySetCursorPosition(left, top, false, length);
                         break;
                     case ConsoleKey.Backspace:
                         ClearCharacter(currentElement, true);
@@ -107,19 +102,19 @@ namespace ConsoleApp
                         break;
                     case ConsoleKey.Home:
                         left = 0;
-                        TrySetCursorPosition(left, top, false, index);
+                        TrySetCursorPosition(left, top, false, length);
                         break;
                     case ConsoleKey.End:
                         left = Console.BufferWidth - 1;
-                        TrySetCursorPosition(left, top, false, index);
+                        TrySetCursorPosition(left, top, false, length);
                         break;
                     case ConsoleKey.PageUp:
                         top = 0;
-                        TrySetCursorPosition(left, top, false, index);
+                        TrySetCursorPosition(left, top, false, length);
                         break;
                     case ConsoleKey.PageDown:
                         top = Console.BufferHeight;
-                        TrySetCursorPosition(left, top, false, index);
+                        TrySetCursorPosition(left, top, false, length);
                         break;
                     default:
                         TryWrite(input.KeyChar, currentElement);
@@ -134,7 +129,7 @@ namespace ConsoleApp
         {
             var left = Console.CursorLeft;
             var top = Console.CursorTop;
-            if (Arr[left, top].IsWriteable)
+            if (Arr[left, top].Writeable)
             {
                 if (Arr[left, top].Value == default)
                 {
@@ -167,22 +162,20 @@ namespace ConsoleApp
         private static ConsoleItem GetCurrentElement(Dictionary<int, ConsoleItem> items, int left, int top)
         {
             var width = Console.BufferWidth;
-            var height = 0;
-            foreach (var item in items)
-            {
-                height += ((item.Value.Value.Length + item.Value.Title.Length) / width + 1);
-            }
+            var height = items.Values.Sum(i => (i.Value.Length + i.Title.Length) / width + 1);
 
             Arr = new BufferItem[width, height];
 
             width = 0;
             height = 0;
 
-            foreach (var item in items)
+            items.ForEach(item =>
             {
-                for (var i = 0; i < item.Value.Title.Length; i++)
+                var value = item.Value;
+                var key = item.Key;
+                for (var i = 0; i < value.Title.Length; i++)
                 {
-                    Arr[width, height] = new BufferItem { Id = item.Key, Value = item.Value.Title[i] };
+                    Arr[width, height] = new BufferItem { Id = key, Value = value.Title[i] };
                     width++;
                     if (width == Console.BufferWidth)
                     {
@@ -191,9 +184,9 @@ namespace ConsoleApp
                     }
                 }
 
-                for (var i = 0; i < item.Value.Value.Length; i++)
+                for (var i = 0; i < value.Value.Length; i++)
                 {
-                    Arr[width, height] = new BufferItem { Id = item.Key, Value = item.Value.Value[i], IsWriteable = true, Index = i };
+                    Arr[width, height] = new BufferItem { Id = key, Value = value.Value[i], Writeable = true, Index = i };
                     width++;
                     if (width == Console.BufferWidth)
                     {
@@ -204,15 +197,15 @@ namespace ConsoleApp
 
 
 
-                if (item.Value.Value.Length < item.Value.Length)
+                if (value.Value.Length < value.Length)
                 {
-                    Arr[width, height].IsWriteable = true;
-                    Arr[width, height].Id = item.Key;
+                    Arr[width, height].Writeable = true;
+                    Arr[width, height].Id = key;
                 }
                 else
                 {
-                    Arr[width, height].Id = item.Key;
-                    Arr[width, height].Index = item.Value.Length;
+                    Arr[width, height].Id = key;
+                    Arr[width, height].Index = value.Length;
                 }
 
 
@@ -225,11 +218,11 @@ namespace ConsoleApp
 
                 for (var i = width; i < Console.BufferWidth; i++)
                 {
-                    Arr[i, height].Id = item.Key;
+                    Arr[i, height].Id = key;
                 }
                 width = 0;
                 height++;
-            }
+            });
 
             return items[Arr[left, top].Id];
         }
@@ -270,7 +263,7 @@ namespace ConsoleApp
             }
 
 
-            while (!Arr[left, top].IsWriteable)
+            while (!Arr[left, top].Writeable)
             {
                 if (Arr[left, top].Index == index)
                 {
@@ -329,7 +322,7 @@ namespace ConsoleApp
                 top++;
             }
 
-            if (moveMe && Arr[prev, top].IsWriteable)
+            if (moveMe && Arr[prev, top].Writeable)
             {
                 if (Arr[prev, top].Index < item.Value.Length - 1)
                 {
@@ -348,7 +341,7 @@ namespace ConsoleApp
                     item.Value = item.Value.Substring(0, item.Value.Length - 1);
                 }
             }
-            else if (!moveMe && Arr[next, top].IsWriteable)
+            else if (!moveMe && Arr[next, top].Writeable)
             {
                 for (var i = Arr[left, top].Index + 1; i < item.Value.Length; i++)
                 {
